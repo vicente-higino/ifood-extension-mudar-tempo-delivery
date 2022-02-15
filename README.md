@@ -1,29 +1,12 @@
-# Chrome Extension TypeScript Starter
+# Mudar tempo do delivery no Portal do Ifood em massa
 
-![build](https://github.com/chibat/chrome-extension-typescript-starter/workflows/build/badge.svg)
+![build](https://github.com/vicente-higino/ifood-extension/workflows/build/badge.svg)
 
-Chrome Extension, TypeScript and Visual Studio Code
+#### Você que usa o portal do ifood e precisa mudar o tempo do delivery sabe como pode ser chato e demorado, principalmente quando você tem outras coisa para fazer no seu restaurante. Essa extensão visa facilitar isso, com uma interface simples você pode aumentar ou diminuir o tempo de todas as areas de uma só vez.
 
 ## Prerequisites
 
 * [node + npm](https://nodejs.org/) (Current Version)
-
-## Option
-
-* [Visual Studio Code](https://code.visualstudio.com/)
-
-## Includes the following
-
-* TypeScript
-* Webpack
-* React
-* Jest
-* Example Code
-    * Chrome Storage
-    * Options Version 2
-    * content script
-    * count up badge number
-    * background
 
 ## Project Structure
 
@@ -38,10 +21,6 @@ Chrome Extension, TypeScript and Visual Studio Code
 npm install
 ```
 
-## Import as Visual Studio Code project
-
-...
-
 ## Build
 
 ```
@@ -55,12 +34,6 @@ npm run build
 ```
 npm run watch
 ```
-
-### Visual Studio Code
-
-Run watch mode.
-
-type `Ctrl + Shift + B`
 
 ## Load extension to chrome
 

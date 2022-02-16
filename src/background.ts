@@ -1,26 +1,43 @@
-chrome.commands.onCommand.addListener((shortcut) => {
-  console.log("lets reload");
-  console.log(shortcut);
+import { Merchant } from "./get-merchant";
+
+export const isDev = () => !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+
+isDev() && chrome.commands.onCommand.addListener((shortcut) => {
   if (shortcut.includes("+M")) {
     chrome.runtime.reload();
   }
 });
-chrome.runtime.onStartup.addListener(function () {
-  chrome.tabs.onActivated.addListener(async (info) => {
-    const tab = await chrome.tabs.get(info.tabId);
-    const isPortalIfood = tab.url?.startsWith("https://portal.ifood.com.br/");
-    isPortalIfood
-      ? chrome.action.enable(tab.id)
-      : chrome.action.disable(tab.id);
-  });
+chrome.runtime.onInstalled.addListener(() => chrome.action.disable());
+chrome.runtime.onStartup.addListener(() => chrome.action.disable());
+
+chrome.tabs.onActivated.addListener((info) => {
+  setIcon(info.tabId);
 });
 
-chrome.runtime.onInstalled.addListener(function () {
-  chrome.tabs.onActivated.addListener(async (info) => {
-    const tab = await chrome.tabs.get(info.tabId);
-    const isPortalIfood = tab.url?.startsWith("https://portal.ifood.com.br/");
-    isPortalIfood
-      ? chrome.action.enable(tab.id)
-      : chrome.action.disable(tab.id);
-  });
+chrome.tabs.onUpdated.addListener((tabId) => {
+  setIcon(tabId);
 });
+
+chrome.action.onClicked.addListener(function (tab) {
+  // Send a message to the active tab
+  chrome.tabs.query({ active: true, currentWindow: true },
+    (tabs) => {
+      tabs[0].id &&
+        chrome.tabs.sendMessage(tabs[0].id,
+          { "message": "clicked_browser_action" }
+        );
+    });
+});
+const setIcon = async (tabId: number) => {
+  const { url, id } = await chrome.tabs.get(tabId);
+  if (url && id) {
+    const isEnabled = url.startsWith("https://portal.ifood.com.br/");
+    if (isEnabled) {
+      chrome.action.enable(tabId);
+      chrome.action.setIcon({ path: "/iconEnabled.png" });
+    } else {
+      chrome.action.disable(tabId);
+      chrome.action.setIcon({ path: "/iconDisabled.png" });
+    }
+  }
+};

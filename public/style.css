@@ -1,0 +1,82 @@
+#extRoot button {
+    all: initial;
+    padding: 0.5rem;
+    background-color: #ea1d2c;
+    color: white;
+    text-align: center;
+    border-radius: 7px;
+}
+
+#extRoot button:hover {
+    cursor: pointer;
+}
+
+#extRoot .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+#extRoot .last-button {
+    grid-column: span 3;
+    padding-block: 1rem;
+    font-weight: bold;
+}
+
+#extRoot button:disabled {
+    background-color: #3f3f3f;
+    color: #c6c6c6;
+    cursor: not-allowed;
+}
+
+#extRoot .time-inc {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+#extRoot .load {
+    position: absolute;
+    inset: 0;
+    background-color: #0b0b0bdb;
+    display: grid;
+    place-items: center;
+    cursor: progress;
+}
+
+#extRoot {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    background-color: white;
+    z-index: 999;
+    padding: 10px;
+    outline: 1px solid black;
+}
+
+#extRoot .exit {
+    position: absolute;
+    top: 0;
+    right: 20px;
+    font-size: 1.5rem;
+}
+
+#extRoot .exit:hover {
+    cursor: pointer;
+}
+
+@keyframes loop {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#extRoot #spinner {
+    font-size: 2rem;
+    color: #ffffff;
+    animation: loop infinite 1s linear;
+}

@@ -6,14 +6,15 @@
   "version": "1.0",
 
   "action": {
-    "default_icon": "icon.png",
-    "default_popup": "popup.html"
+    "default_title": "Mudar Tempo Delivery",
+    "default_icon": "iconDisabled.png"
   },
 
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["js/vendor.js", "js/content_script.js"]
+      "matches": ["https://*.ifood.com.br/*"],
+      "js": ["js/vendor.js", "js/content_script.js"],
+      "css": ["style.css"]
     }
   ],
 

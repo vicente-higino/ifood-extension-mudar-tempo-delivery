@@ -1,4 +1,4 @@
-interface Merchant {
+export interface Merchant {
   id: number;
   salesforceId: string;
   uuid: string;
@@ -60,12 +60,6 @@ interface MinimumOrderValue {
 }
 
 export default async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab.id) {
-    const [fromPageLocalStore] = await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: false },
-      func: () => localStorage["get-merchant"],
-    });
-    return JSON.parse(fromPageLocalStore.result) as Merchant;
-  }
+  const m = localStorage["get-merchant"];
+  return m ? JSON.parse(m) as Merchant : false
 };

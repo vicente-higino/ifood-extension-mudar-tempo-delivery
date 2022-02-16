@@ -1,65 +1,11 @@
-import React, { useEffect, useState } from "react";
-import ReactDOM from "react-dom";
-import axios from "axios";
-import { AreaAttendingResponse } from "./AreaAttendingResponse";
-import { IAreaParams, Money } from "./AreaParamsResponse";
+import React, { EventHandler, useCallback, useEffect, useState } from "react";
+import { IAreaParams } from "./AreaParamsResponse";
 import getMerchant from "./get-merchant";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMinus, faPlus, faSave, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus, faSave, faSpinner, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { hide, show, toggle } from "./content_script";
+import { getCookie, getAreasParams, getAreasAttending, saveAreas, prepareData } from "./utils";
 
-const getAreasAttending = async (restaurantId: string) => {
-  return await axios.get<AreaAttendingResponse>(
-    `https://portal-api.ifood.com.br/next-web-bff/delivery-area/attending?restaurantUUID=${restaurantId}&context=DEFAULT,DIGITAL_CATALOG`,
-    {
-      headers: { Accept: "application/json" },
-    }
-  );
-};
-const getAreasParams = async (ctx: "DIGITAL_CATALOG" | "DEFAULT", restaurantId: string) => {
-  return await axios.get<IAreaParams[]>(
-    `https://portal-api.ifood.com.br/next-web-bff/delivery-parameters?restaurantId=${restaurantId}&context=${ctx}`,
-    {
-      headers: { Accept: "application/json" },
-    }
-  );
-};
-
-const saveAreas = (data: deliverySettings, restaurantId: string) => {
-  axios.post(`https://portal-api.ifood.com.br/next-web-bff/restaurants/${restaurantId}/delivery-settings`, data, {
-    headers: { Accept: "application/json, text/plain, */*" },
-  });
-};
-
-interface deliverySettings {
-  context: "DIGITAL_CATALOG" | "DEFAULT";
-  areas: string[];
-  parameters: {
-    sequence: number;
-    range: number;
-    money: Money;
-    time: number;
-  }[];
-}
-
-const prepareData = (
-  context: "DIGITAL_CATALOG" | "DEFAULT",
-  areas: string[],
-  params: IAreaParams[],
-  incTime: number = 0
-): deliverySettings => {
-  return {
-    context,
-    areas,
-    parameters: params.map((p) => {
-      return {
-        sequence: p.sequence,
-        range: p.sequence,
-        money: p.money,
-        time: p.time + incTime,
-      };
-    }),
-  };
-};
 const LoadingSpinner = () => {
   return (
     <div className="load">
@@ -70,31 +16,61 @@ const LoadingSpinner = () => {
   );
 };
 
-const Popup = () => {
+const Exit = () => {
+  return (
+    <div className="exit" onClick={toggle}>
+      <FontAwesomeIcon icon={faXmark} />
+    </div>
+  );
+};
+
+export const Popup = () => {
   const [timeInc, setTimeInc] = useState(0);
+  const [lowestTime, setLowestTime] = useState(Number.POSITIVE_INFINITY);
   const [loading, setLoading] = useState(false);
   const [tempoMin, setTempoMin] = useState<IAreaParams>();
-  useEffect(() => {
-    (async () => {
-      const merchant = await getMerchant();
-      if (merchant) {
-        setLoading(true);
-        const areasParamsDefaultRes = await getAreasParams("DEFAULT", merchant.uuid);
-        setTempoMin(areasParamsDefaultRes.data.find((a) => a.sequence == 1));
-        setLoading(false);
-      }
-    })();
+  const updateTempoMin = async () => {
+    const merchant = await getMerchant();
+    const token = getCookie("access_token");
+    if (merchant && token) {
+      show();
+      setLoading(true);
+      const areasParamsDefaultRes = await getAreasParams("DEFAULT", merchant.uuid, token);
+      const lowest = areasParamsDefaultRes.data.find((a) => a.sequence == 1);
+      setTempoMin(lowest);
+      lowest?.time && setLowestTime(lowest.time);
+      setLoading(false);
+    } else {
+      hide();
+    }
+  };
+  const beforeLeave = useCallback((e: BeforeUnloadEvent) => {
+    const msg = "Você realmente deseja sair? O progresso será perdido";
+    e.returnValue = msg;
+    return msg;
   }, []);
+  useEffect(() => {
+    updateTempoMin();
+  }, []);
+  useEffect(() => {
+    console.log(loading);
+    if (loading) {
+      window.addEventListener("beforeunload", beforeLeave);
+    } else {
+      window.removeEventListener("beforeunload", beforeLeave);
+    }
+  }, [loading]);
 
   const save = async (timeInc: number) => {
     if (timeInc != 0) {
       const merchant = await getMerchant();
-      if (merchant) {
+      const token = getCookie("access_token");
+      if (merchant && token) {
         setLoading(true);
         const [areasAttendigRes, areasParamsDefaultRes, areasParamsDigitalRes] = await Promise.all([
-          getAreasAttending(merchant.uuid),
-          getAreasParams("DEFAULT", merchant.uuid),
-          getAreasParams("DIGITAL_CATALOG", merchant.uuid),
+          getAreasAttending(merchant.uuid, token),
+          getAreasParams("DEFAULT", merchant.uuid, token),
+          getAreasParams("DIGITAL_CATALOG", merchant.uuid, token),
         ]);
         const areasIds = areasAttendigRes.data.features.flatMap((f) => {
           return f.properties.isAttending ? { id: f.properties.id, setup: f.properties.setup } : [];
@@ -114,16 +90,22 @@ const Popup = () => {
           default: [...areasParamsDefaultRes.data],
           digital: [...areasParamsDigitalRes.data],
         };
-        saveAreas(prepareData("DEFAULT", areasAttending.default, areasParams.default, timeInc), merchant.uuid);
-        saveAreas(prepareData("DIGITAL_CATALOG", areasAttending.digital, areasParams.digital, timeInc), merchant.uuid);
+        saveAreas(prepareData("DEFAULT", areasAttending.default, areasParams.default, timeInc), merchant.uuid, token);
+        saveAreas(
+          prepareData("DIGITAL_CATALOG", areasAttending.digital, areasParams.digital, timeInc),
+          merchant.uuid,
+          token
+        );
         setTempoMin((prev) => prev && { ...prev, time: prev?.time + timeInc });
+        setLowestTime((prev) => prev + timeInc);
         setTimeInc(0);
         setLoading(false);
       }
     }
   };
   return (
-    <div style={{ width: "300px" }}>
+    <div style={{ minWidth: "350px", maxWidth: "400px" }}>
+      <Exit />
       {loading && <LoadingSpinner />}
       <h1 style={{ marginBlock: "0.3em" }}>Aumentar tempo do delivery em {timeInc} minutos</h1>
       {tempoMin && (
@@ -132,7 +114,7 @@ const Popup = () => {
         </h4>
       )}
       <div className="grid">
-        <button disabled={loading} onClick={() => setTimeInc(timeInc - 5)}>
+        <button disabled={loading || lowestTime + timeInc <= 0} onClick={() => setTimeInc(timeInc - 5)}>
           <FontAwesomeIcon icon={faMinus} />
         </button>
         <span className="time-inc">{timeInc}</span>
@@ -146,10 +128,3 @@ const Popup = () => {
     </div>
   );
 };
-
-ReactDOM.render(
-  <React.StrictMode>
-    <Popup />
-  </React.StrictMode>,
-  document.getElementById("root")
-);

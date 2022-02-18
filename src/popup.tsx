@@ -107,7 +107,9 @@ export const Popup = () => {
     <div style={{ minWidth: "350px", maxWidth: "400px" }}>
       <Exit />
       {loading && <LoadingSpinner />}
-      <h1 style={{ marginBlock: "0.3em" }}>Aumentar tempo do delivery em {timeInc} minutos</h1>
+      <h1 style={{ marginBlock: "0.3em" }}>
+        {timeInc >= 0 ? "Aumentar" : "Diminuir"} tempo do delivery em {Math.abs(timeInc)} minutos
+      </h1>
       {tempoMin && (
         <h4 style={{ margin: "0", marginBottom: "10px", textAlign: "center" }}>
           Tempo mais baixo: {tempoMin.time} minutos

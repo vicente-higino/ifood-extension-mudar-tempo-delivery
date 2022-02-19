@@ -3,11 +3,13 @@
 
   "name": "Mudar tempo delivery Portal Ifood em massa",
   "description": "Aumente ou diminua os tempos de todos os alcances do App do ifood e do cardápio digital de uma só vez.",
-  "version": "1.2.1",
-
+  "version": "1.2.2",
+  "icons": {
+    "128": "iconEnabled.png"
+  },
   "action": {
     "default_title": "Mudar Tempo Delivery",
-    "default_icon": "iconDisabled.png"
+    "default_icon": { "32": "iconDisabled.png" }
   },
 
   "content_scripts": [

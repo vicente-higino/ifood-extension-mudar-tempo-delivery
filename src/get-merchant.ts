@@ -59,7 +59,7 @@ interface MinimumOrderValue {
   value: number;
 }
 
-export default async () => {
+export default () => {
   const m = localStorage["get-merchant"];
   return m ? JSON.parse(m) as Merchant : false
 };

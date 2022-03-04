@@ -1,4 +1,4 @@
-import React, { EventHandler, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IAreaParams } from "./AreaParamsResponse";
 import getMerchant from "./get-merchant";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -29,31 +29,54 @@ export const Popup = () => {
   const [lowestTime, setLowestTime] = useState(Number.POSITIVE_INFINITY);
   const [loading, setLoading] = useState(false);
   const [tempoMin, setTempoMin] = useState<IAreaParams>();
+  const [isLoggedIn, setisLoggedIn] = useState(false);
+  const loggedInRef = useRef(false);
   const updateTempoMin = async () => {
-    const merchant = await getMerchant();
+    const merchant = getMerchant();
     const token = getCookie("access_token");
     if (merchant && token) {
-      show();
       setLoading(true);
       const areasParamsDefaultRes = await getAreasParams("DEFAULT", merchant.uuid, token);
       const lowest = areasParamsDefaultRes.data.find((a) => a.sequence == 1);
       setTempoMin(lowest);
       lowest?.time && setLowestTime(lowest.time);
       setLoading(false);
-    } else {
-      hide();
+      return true;
     }
+    return false;
   };
+
   const beforeLeave = useCallback((e: BeforeUnloadEvent) => {
     const msg = "Você realmente deseja sair? O progresso será perdido";
     e.returnValue = msg;
     return msg;
   }, []);
+
+  const loggin = () => {
+    loggedInRef.current = true;
+    setisLoggedIn(true);
+    show();
+  };
+  const loggout = () => {
+    loggedInRef.current = false;
+    setisLoggedIn(false);
+    hide();
+  };
+
   useEffect(() => {
-    updateTempoMin();
+    window.setInterval(async () => {
+      const { pathname } = new URL(document.URL);
+      if (["/login", "/logout"].includes(pathname) && loggedInRef.current) {
+        loggout();
+      } else {
+        if (!loggedInRef.current) {
+          if (await updateTempoMin()) loggin();
+        }
+      }
+    }, 250);
   }, []);
+
   useEffect(() => {
-    console.log(loading);
     if (loading) {
       window.addEventListener("beforeunload", beforeLeave);
     } else {
@@ -63,7 +86,7 @@ export const Popup = () => {
 
   const save = async (timeInc: number) => {
     if (timeInc != 0) {
-      const merchant = await getMerchant();
+      const merchant = getMerchant();
       const token = getCookie("access_token");
       if (merchant && token) {
         setLoading(true);
@@ -104,29 +127,37 @@ export const Popup = () => {
     }
   };
   return (
-    <div style={{ minWidth: "350px", maxWidth: "400px" }}>
+    <>
       <Exit />
-      {loading && <LoadingSpinner />}
-      <h1 style={{ marginBlock: "0.3em" }}>
-        {timeInc >= 0 ? "Aumentar" : "Diminuir"} tempo do delivery em {Math.abs(timeInc)} minutos
-      </h1>
-      {tempoMin && (
-        <h4 style={{ margin: "0", marginBottom: "10px", textAlign: "center" }}>
-          Tempo mais baixo: {tempoMin.time} minutos
-        </h4>
+      {isLoggedIn ? (
+        <div>
+          {loading && <LoadingSpinner />}
+          <h1 style={{ marginBlock: "0.3em" }}>
+            {timeInc >= 0 ? "Aumentar" : "Diminuir"} tempo do delivery em {Math.abs(timeInc)} minutos
+          </h1>
+          {tempoMin && (
+            <h4 style={{ margin: "0", marginBottom: "10px", textAlign: "center" }}>
+              Tempo mais baixo: {tempoMin.time} minutos
+            </h4>
+          )}
+          <div className="grid">
+            <button disabled={loading || lowestTime + timeInc <= 0} onClick={() => setTimeInc(timeInc - 5)}>
+              <FontAwesomeIcon icon={faMinus} />
+            </button>
+            <span className="time-inc">{timeInc}</span>
+            <button disabled={loading} onClick={() => setTimeInc(timeInc + 5)}>
+              <FontAwesomeIcon icon={faPlus} />
+            </button>
+            <button disabled={loading || timeInc == 0} className="last-button" onClick={() => save(timeInc)}>
+              <FontAwesomeIcon icon={faSave} /> SALVAR
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h1>Você precisa fazer login para utilizar essa extenção</h1>
+        </div>
       )}
-      <div className="grid">
-        <button disabled={loading || lowestTime + timeInc <= 0} onClick={() => setTimeInc(timeInc - 5)}>
-          <FontAwesomeIcon icon={faMinus} />
-        </button>
-        <span className="time-inc">{timeInc}</span>
-        <button disabled={loading} onClick={() => setTimeInc(timeInc + 5)}>
-          <FontAwesomeIcon icon={faPlus} />
-        </button>
-        <button disabled={loading || timeInc == 0} className="last-button" onClick={() => save(timeInc)}>
-          <FontAwesomeIcon icon={faSave} /> SALVAR
-        </button>
-      </div>
-    </div>
+    </>
   );
 };

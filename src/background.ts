@@ -1,4 +1,3 @@
-import { Merchant } from "./get-merchant";
 
 export const isDev = () => !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
 
@@ -20,13 +19,10 @@ chrome.tabs.onUpdated.addListener((tabId) => {
 
 chrome.action.onClicked.addListener(function (tab) {
   // Send a message to the active tab
-  chrome.tabs.query({ active: true, currentWindow: true },
-    (tabs) => {
-      tabs[0].id &&
-        chrome.tabs.sendMessage(tabs[0].id,
-          { "message": "clicked_browser_action" }
-        );
-    });
+  tab.id && tab.active && chrome.tabs.sendMessage(tab.id,
+    { "message": "clicked_browser_action" }
+  );
+
 });
 const setIcon = async (tabId: number) => {
   const { url, id } = await chrome.tabs.get(tabId);
